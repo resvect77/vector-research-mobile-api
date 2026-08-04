@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Vector Research // Mobile Telemetry</title>
+  <!-- Tailwind CSS for sleek Dark Aerospace HUD UI -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body { background-color: #0b0f17; color: #e2e8f0; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; }
+  </style>
+</head>
+<body class="min-h-screen p-4 max-w-md mx-auto flex flex-col justify-between">
+
+  <div>
+    <!-- HEADER -->
+    <header class="border-b border-slate-800 pb-4 mb-6">
+      <div class="flex items-center justify-between">
+        <h1 class="text-xl font-bold tracking-wider text-cyan-400">VECTOR RESEARCH</h1>
+        <span class="text-xs px-2 py-1 rounded bg-slate-800 text-slate-400 border border-slate-700">VR-MOB-v1</span>
+      </div>
+      <p class="text-xs text-slate-500 mt-1">LEO Atmospheric Drag & Space Weather Control</p>
+    </header>
+
+    <!-- SHELL PRESET TOGGLES -->
+    <section class="mb-6">
+      <label class="text-xs font-semibold text-slate-400 uppercase tracking-wider block mb-2">Focus Orbital Shells</label>
+      <div class="grid grid-cols-3 gap-2">
+        <button onclick="setAltitude(340)" class="py-2 rounded border border-slate-700 bg-slate-900 hover:border-cyan-500 focus:border-cyan-400 text-sm font-bold text-cyan-300 transition">340 km</button>
+        <button onclick="setAltitude(530)" class="py-2 rounded border border-slate-700 bg-slate-900 hover:border-cyan-500 focus:border-cyan-400 text-sm font-bold text-cyan-300 transition">530 km</button>
+        <button onclick="setAltitude(570)" class="py-2 rounded border border-slate-700 bg-slate-900 hover:border-cyan-500 focus:border-cyan-400 text-sm font-bold text-cyan-300 transition">570 km</button>
+      </div>
+    </section>
+
+    <!-- CUSTOM ALTITUDE SLIDER -->
+    <section class="mb-6 bg-slate-900/60 p-4 rounded-lg border border-slate-800">
+      <div class="flex justify-between items-center mb-2">
+        <label for="altitudeRange" class="text-xs text-slate-400 uppercase">Target Altitude</label>
+        <span id="altVal" class="text-lg font-bold text-cyan-400">340 km</span>
+      </div>
+      <input type="range" id="altitudeRange" min="200" max="800" value="340" step="5" oninput="updateAltSlider(this.value)" class="w-full accent-cyan-400 bg-slate-800 h-2 rounded-lg cursor-pointer">
+    </section>
+
+    <!-- DATE & TIME INPUTS -->
+    <section class="grid grid-cols-2 gap-3 mb-6">
+      <div>
+        <label for="targetDate" class="text-xs text-slate-400 uppercase block mb-1">Target Date</label>
+        <input type="date" id="targetDate" class="w-full bg-slate-900 border border-slate-800 rounded p-2 text-xs text-slate-200 focus:border-cyan-500 outline-none">
+      </div>
+      <div>
+        <label for="targetTime" class="text-xs text-slate-400 uppercase block mb-1">Target Time (UTC)</label>
+        <input type="time" id="targetTime" class="w-full bg-slate-900 border border-slate-800 rounded p-2 text-xs text-slate-200 focus:border-cyan-500 outline-none">
+      </div>
+    </section>
+
+    <!-- FETCH BUTTON -->
+    <button onclick="fetchTelemetry()" class="w-full py-3 bg-cyan-600 hover:bg-cyan-500 active:bg-cyan-700 text-slate-950 font-bold rounded tracking-wider text-sm transition flex justify-center items-center gap-2 mb-6">
+      <span id="btnText">FETCH TELEMETRY READOUT</span>
+      <div id="spinner" class="hidden w-4 h-4 border-2 border-slate-950 border-t-transparent rounded-full animate-spin"></div>
+    </button>
+
+    <!-- TELEMETRY READOUT CARDS -->
+    <div id="readoutCard" class="space-y-4">
+      <!-- Status Badge -->
+      <div class="flex justify-between items-center bg-slate-900/80 p-3 rounded border border-slate-800">
+        <span class="text-xs text-slate-400">ATMOSPHERIC STATE</span>
+        <span id="statusBadge" class="text-xs font-bold px-2 py-1 rounded bg-slate-800 text-slate-400 border border-slate-700">AWAITING QUERY</span>
+      </div>
+
+      <!-- Space Weather Grid -->
+      <div class="bg-slate-900/50 p-4 rounded border border-slate-800/80">
+        <h3 class="text-xs text-cyan-400 uppercase tracking-wider mb-3 border-b border-slate-800 pb-1">NOAA SWPC Space Weather Feed</h3>
+        <div class="grid grid-cols-3 gap-2 text-center">
+          <div class="bg-slate-950 p-2 rounded">
+            <p class="text-[10px] text-slate-500">SOLAR WIND (Vx)</p>
+            <p id="valVx" class="text-sm font-bold text-slate-200">-- km/s</p>
+          </div>
+          <div class="bg-slate-950 p-2 rounded">
+            <p class="text-[10px] text-slate-500">IMF MAG (Bz)</p>
+            <p id="valBz" class="text-sm font-bold text-slate-200">-- nT</p>
+          </div>
+          <div class="bg-slate-950 p-2 rounded">
+            <p class="text-[10px] text-slate-500">KP INDEX</p>
+            <p id="valKp" class="text-sm font-bold text-slate-200">--</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Prediction Physics Grid -->
+      <div class="bg-slate-900/50 p-4 rounded border border-slate-800/80">
+        <h3 class="text-xs text-cyan-400 uppercase tracking-wider mb-3 border-b border-slate-800 pb-1">Thermospheric Predictions</h3>
+        <div class="space-y-2 text-xs">
+          <div class="flex justify-between">
+            <span class="text-slate-400">Baseline Density (&rho;<sub>0</sub>):</span>
+            <span id="valRhoBase" class="text-slate-300 font-mono">--</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-slate-400">Predicted Density (&rho;):</span>
+            <span id="valRhoPred" class="text-cyan-300 font-mono font-bold">--</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-slate-400">Density Surge Delta (&Delta;&rho;):</span>
+            <span id="valSurge" class="text-slate-300 font-bold">-- %</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-slate-400">Drag Accommodation (C<sub>d</sub>):</span>
+            <span id="valCd" class="text-amber-300 font-mono">--</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FOOTER -->
+  <footer class="text-center text-[10px] text-slate-600 mt-8 pt-4 border-t border-slate-900">
+    CONNECTED ENGINE: https://vector-research-mobile-api.onrender.com
+  </footer>
+
+  <!-- APP JAVASCRIPT LOGIC -->
+  <script>
+    const RENDER_API_URL = "https://vector-research-mobile-api.onrender.com/api/v1/forecast";
+
+    // Set default date/time on load
+    window.onload = () => {
+      const now = new Date();
+      document.getElementById('targetDate').value = now.toISOString().split('T')[0];
+      const hours = String(now.getUTCHours()).padStart(2, '0');
+      document.getElementById('targetTime').value = `${hours}:00`;
+      fetchTelemetry(); // Initial pull
+    };
+
+    function setAltitude(val) {
+      document.getElementById('altitudeRange').value = val;
+      updateAltSlider(val);
+      fetchTelemetry();
+    }
+
+    function updateAltSlider(val) {
+      document.getElementById('altVal').innerText = `${val} km`;
+    }
+
+    async function fetchTelemetry() {
+      const altitude = document.getElementById('altitudeRange').value;
+      const date = document.getElementById('targetDate').value;
+      const time = document.getElementById('targetTime').value;
+
+      const btnText = document.getElementById('btnText');
+      const spinner = document.getElementById('spinner');
+      
+      btnText.innerText = "QUERYING ENGINE...";
+      spinner.classList.remove('hidden');
+
+      try {
+        const queryUrl = `${RENDER_API_URL}?altitude_km=${altitude}&target_date=${date}&target_time_utc=${time}`;
+        const res = await fetch(queryUrl);
+        const data = await res.json();
+
+        // Update SWPC Weather Readouts
+        document.getElementById('valVx').innerText = `${data.space_weather.solar_wind_velocity_km_s} km/s`;
+        document.getElementById('valBz').innerText = `${data.space_weather.interplanetary_mag_bz_nT} nT`;
+        document.getElementById('valKp').innerText = `${data.space_weather.planetary_kp_index}`;
+
+        // Update Physics Readouts
+        document.getElementById('valRhoBase').innerText = `${data.prediction_metrics.baseline_density_kg_m3} kg/m³`;
+        document.getElementById('valRhoPred').innerText = `${data.prediction_metrics.predicted_density_kg_m3} kg/m³`;
+        document.getElementById('valSurge').innerText = `+${data.prediction_metrics.density_surge_pct}%`;
+        document.getElementById('valCd').innerText = `${data.prediction_metrics.drag_coefficient_Cd}`;
+
+        // Update Status Badge
+        const badge = document.getElementById('statusBadge');
+        const status = data.prediction_metrics.status;
+        badge.innerText = status;
+
+        if (status === "QUIET") {
+          badge.className = "text-xs font-bold px-2 py-1 rounded bg-emerald-950 text-emerald-400 border border-emerald-700";
+        } else if (status === "ELEVATED") {
+          badge.className = "text-xs font-bold px-2 py-1 rounded bg-amber-950 text-amber-400 border border-amber-700";
+        } else {
+          badge.className = "text-xs font-bold px-2 py-1 rounded bg-rose-950 text-rose-400 border border-rose-700";
+        }
+
+      } catch (err) {
+        alert("Server wake-up in progress or network timeout. Please retry in 20 seconds.");
+      } finally {
+        btnText.innerText = "FETCH TELEMETRY READOUT";
+        spinner.classList.add('hidden');
+      }
+    }
+  </script>
+</body>
+</html>
